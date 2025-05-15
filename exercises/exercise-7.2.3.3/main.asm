@@ -7,16 +7,28 @@ ExitProcess PROTO, dwExitCode:DWORD
 
 .data
     stringBuffer BYTE 101 DUP(0)       ; Max 100 chars + null terminator
+    msgPrompt BYTE "Enter string length (max 100): ", 0
     msg BYTE "Random String: ", 0
+    strLen DWORD ?
 
 .code
 main PROC
     call Randomize
 
-    mov ecx, 20            ; Loop 20 times
-gen_loop:
-    ; Set length = 10 (can be varied or randomized)
-    mov eax, 10
+    ; Prompt for string length
+    mov edx, OFFSET msgPrompt
+    call WriteString
+    call ReadDec            ; EAX = user input
+    cmp eax, 100
+    jbe store_length
+    mov eax, 100            ; Cap at 100
+store_length:
+    mov strLen, eax
+
+    ; Generate 20 strings of that length
+    mov ecx, 20
+GenLoop:
+    mov eax, strLen
     mov edx, OFFSET stringBuffer
     call GenerateRandomString
 
@@ -29,7 +41,7 @@ gen_loop:
     call WriteString
     call Crlf
 
-    loop gen_loop
+    loop GenLoop
 
     INVOKE ExitProcess, 0
 main ENDP
@@ -38,20 +50,20 @@ main ENDP
 ; Procedure: GenerateRandomString
 ; EAX = length of string
 ; EDX = destination buffer
+; Output: null-terminated random A–Z string
 ; -------------------------------------
 GenerateRandomString PROC
     push ecx
     push eax
     mov ecx, eax            ; ECX = length
 
-    ; EDX = destination pointer
-gen_loop:
+GenCharLoop:
     mov eax, 26
-    call RandomRange        ; EAX = 0 to 25
+    call RandomRange        ; EAX = 0..25
     add al, 'A'             ; Convert to ASCII A–Z
-    mov [edx], al           ; Store in buffer
+    mov [edx], al
     inc edx
-    loop gen_loop
+    loop GenCharLoop
 
     mov BYTE PTR [edx], 0   ; Null terminator
     pop eax
