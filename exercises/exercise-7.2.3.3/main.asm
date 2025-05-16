@@ -1,71 +1,66 @@
-.386
-.model flat, stdcall
-.stack 4096
-
 INCLUDE Irvine32.inc
-ExitProcess PROTO, dwExitCode:DWORD
 
 .data
-    stringBuffer BYTE 101 DUP(0)       ; Max 100 chars + null terminator
-    msgPrompt BYTE "Enter string length (max 100): ", 0
-    msg BYTE "Random String: ", 0
-    strLen DWORD ?
+    stringBuffer BYTE 101 DUP(0)           ; Buffer for random string (100 chars max + null)
+    msgPrompt     BYTE "Enter string length (max 100): ", 0
+    msg           BYTE "Random String: ", 0
+    strLen        DWORD ?                  ; Length of string entered by user
 
 .code
 main PROC
-    call Randomize
+    call Randomize                         ; random seed
 
-    ; Prompt for string length
+    ; Ask user for string length
     mov edx, OFFSET msgPrompt
     call WriteString
-    call ReadDec            ; EAX = user input
+    call ReadDec                           ; read str len into EAX
     cmp eax, 100
-    jbe store_length
-    mov eax, 100            ; Cap at 100
+    jbe store_length                       ; if input  100, keep
+    mov eax, 100                           ; else max at 100
 store_length:
-    mov strLen, eax
+    mov strLen, eax                        ; store length in strLen
 
-    ; Generate 20 strings of that length
+    ; Generate and print 20 random strings
     mov ecx, 20
 GenLoop:
     mov eax, strLen
     mov edx, OFFSET stringBuffer
-    call GenerateRandomString
+    call GenerateRandomString              ; generate random string into buffer
 
-    ; Print label
     mov edx, OFFSET msg
-    call WriteString
+    call WriteString                       
 
-    ; Print generated string
     mov edx, OFFSET stringBuffer
-    call WriteString
-    call Crlf
+    call WriteString                       ; Print generated string
+    call Crlf                              ; new line
 
-    loop GenLoop
+    loop GenLoop                           ; Repeat 20 times
 
-    INVOKE ExitProcess, 0
+    exit
 main ENDP
 
-; -------------------------------------
-; Procedure: GenerateRandomString
-; EAX = length of string
-; EDX = destination buffer
-; Output: null-terminated random A–Z string
-; -------------------------------------
+
+; procedure: GenerateRandomString
+; in:
+;   EAX = string length
+;   EDX = ptr to output buffer
+; out:
+;   null-terminated string of random AZ characters
+
 GenerateRandomString PROC
-    push ecx
-    push eax
-    mov ecx, eax            ; ECX = length
+    push ecx                               ; save current value of ECX register on stack
+    push eax                               ; save current value of EAX register on stack
+    mov ecx, eax                           ; ECX = length of string to generate
 
 GenCharLoop:
     mov eax, 26
-    call RandomRange        ; EAX = 0..25
-    add al, 'A'             ; Convert to ASCII A–Z
-    mov [edx], al
-    inc edx
-    loop GenCharLoop
+    call RandomRange                       ; EAX = random number from 0 to 25
+    add al, 'A'                            ; convert to ASCII letter (A-Z)
+    mov [edx], al                          ; store character in buffer
+    inc edx                                ; move to next position
+    loop GenCharLoop                       ; repeat ECX times
 
-    mov BYTE PTR [edx], 0   ; Null terminator
+    mov BYTE PTR [edx], 0                  ; add null terminator
     pop eax
     pop ecx
     ret
